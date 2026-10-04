@@ -16,6 +16,7 @@
 
 #include "properties.h"
 
+#include <cstdio>
 #include <string>
 
 #include "utils/ColorUtil.h"
@@ -237,6 +238,18 @@ auto Properties::ExternalHdrEnabled() -> bool {
   constexpr int kDefault = 1;
   return (property_get_bool("vendor.hwc.drm.external_hdr_enabled", kDefault) !=
           0);
+}
+
+auto Properties::PreferredModeSize()
+    -> std::optional<std::pair<uint32_t, uint32_t>> {
+  char buf[PROPERTY_VALUE_MAX] = {};
+  property_get("ro.vendor.hwc.drm.preferred_mode", buf, "");
+  uint32_t width = 0;
+  uint32_t height = 0;
+  if (sscanf(buf, "%ux%u", &width, &height) != 2 || width == 0 || height == 0) {
+    return std::nullopt;
+  }
+  return std::make_pair(width, height);
 }
 
 auto Properties::SkipPlaneDamageClips() -> bool {

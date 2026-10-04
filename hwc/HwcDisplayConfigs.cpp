@@ -175,6 +175,36 @@ HwcDisplayConfigsGenerator::GenerateDisplayConfigs(
     configs.preferred_config_id = configs.hwc_configs.begin()->first;
   }
 
+  /* Override the sink's preferred mode with the requested size, keeping the
+   * refresh rate closest to the one the sink prefers. */
+  if (params.preferred_size.has_value()) {
+    const auto [width, height] = params.preferred_size.value();
+    const auto &native = configs.hwc_configs[configs.preferred_config_id];
+    const float native_refresh = native.mode.GetVRefresh();
+    ConfigId best_id = 0;
+    for (const auto &[id, config] : configs.hwc_configs) {
+      const auto &raw = config.mode.GetRawMode();
+      if (raw.hdisplay != width || raw.vdisplay != height ||
+          config.output_type != native.output_type) {
+        continue;
+      }
+      if (best_id == 0 ||
+          fabsf(config.mode.GetVRefresh() - native_refresh) <
+              fabsf(configs.hwc_configs[best_id].mode.GetVRefresh() -
+                    native_refresh)) {
+        best_id = id;
+      }
+    }
+    if (best_id != 0) {
+      ALOGI("Preferred mode overridden: %s -> %s",
+            native.mode.GetName().c_str(),
+            configs.hwc_configs[best_id].mode.GetName().c_str());
+      configs.preferred_config_id = best_id;
+    } else {
+      ALOGW("No %ux%u mode, keeping the sink's preferred mode", width, height);
+    }
+  }
+
   return configs;
 }
 

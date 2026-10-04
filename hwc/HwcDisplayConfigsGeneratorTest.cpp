@@ -632,4 +632,72 @@ TEST_F(HwcDisplayConfigsGeneratorTest, Init_3DModesFilteredBeforeBackend) {
   ASSERT_TRUE(configs_opt.has_value());
 }
 
+TEST(HwcDisplayConfigsPreferredModeTest, SelectsClosestNativeRefresh) {
+  FakeDrmConnector connector(nullptr, 1, true, 500, 300);
+  connector.SetModes({
+      CreateModeFloat(3840, 2160, 59.94F, 0, DRM_MODE_TYPE_PREFERRED,
+                      "2160p59.94"),
+      CreateModeFloat(1280, 720, 50.0F, 0, 0, "720p50"),
+      CreateModeFloat(1280, 720, 75.0F, 0, 0, "720p75"),
+      CreateModeFloat(1280, 720, 60.0F, 0, 0, "720p60"),
+  });
+  HwcDisplayConfigsGenerator generator;
+  HwcConfigParameters params = {
+      .preferred_size = std::make_pair(1280U, 720U),
+  };
+
+  auto configs = generator.GenerateDisplayConfigs(connector, params);
+
+  ASSERT_TRUE(configs.has_value());
+  EXPECT_EQ(configs->hwc_configs.size(), 4);
+  const auto& preferred = configs->hwc_configs.at(configs->preferred_config_id);
+  EXPECT_EQ(preferred.mode.GetRawMode().hdisplay, 1280);
+  EXPECT_EQ(preferred.mode.GetRawMode().vdisplay, 720);
+  EXPECT_FLOAT_EQ(preferred.mode.GetVRefresh(), 60.0F);
+}
+
+TEST(HwcDisplayConfigsPreferredModeTest, KeepsNativeModeWhenSizeIsUnavailable) {
+  FakeDrmConnector connector(nullptr, 1, true, 500, 300);
+  connector.SetModes({
+      CreateModeFloat(1920, 1080, 60.0F, 0, DRM_MODE_TYPE_PREFERRED, "1080p60"),
+      CreateModeFloat(1280, 720, 60.0F, 0, 0, "720p60"),
+  });
+  HwcDisplayConfigsGenerator generator;
+  HwcConfigParameters params = {
+      .preferred_size = std::make_pair(1600U, 900U),
+  };
+
+  auto configs = generator.GenerateDisplayConfigs(connector, params);
+
+  ASSERT_TRUE(configs.has_value());
+  EXPECT_EQ(configs->hwc_configs.size(), 2);
+  const auto& preferred = configs->hwc_configs.at(configs->preferred_config_id);
+  EXPECT_EQ(preferred.mode.GetRawMode().hdisplay, 1920);
+  EXPECT_EQ(preferred.mode.GetRawMode().vdisplay, 1080);
+  EXPECT_FLOAT_EQ(preferred.mode.GetVRefresh(), 60.0F);
+}
+
+TEST(HwcDisplayConfigsPreferredModeTest, KeepsHdrOutputTypeAndAllConfigs) {
+  FakeDrmConnector connector(nullptr, 1, true, 500, 300);
+  connector.SetModes({
+      CreateModeFloat(1920, 1080, 60.0F, 0, DRM_MODE_TYPE_PREFERRED, "1080p60"),
+      CreateModeFloat(1280, 720, 60.0F, 0, 0, "720p60"),
+  });
+  HwcDisplayConfigsGenerator generator;
+  HwcConfigParameters params = {
+      .use_color_pipeline = true,
+      .external_hdr_enabled = true,
+      .preferred_size = std::make_pair(1280U, 720U),
+  };
+
+  auto configs = generator.GenerateDisplayConfigs(connector, params);
+
+  ASSERT_TRUE(configs.has_value());
+  EXPECT_EQ(configs->hwc_configs.size(), 4);
+  const auto& preferred = configs->hwc_configs.at(configs->preferred_config_id);
+  EXPECT_EQ(preferred.mode.GetRawMode().hdisplay, 1280);
+  EXPECT_EQ(preferred.mode.GetRawMode().vdisplay, 720);
+  EXPECT_EQ(preferred.output_type, OutputType::kSystem);
+}
+
 }  // namespace android::drm_hwcomposer

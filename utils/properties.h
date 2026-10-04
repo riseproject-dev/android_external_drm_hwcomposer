@@ -16,7 +16,10 @@
 
 #pragma once
 
+#include <cstdint>
+#include <optional>
 #include <string>
+#include <utility>
 
 namespace android::drm_hwcomposer {
 
@@ -48,6 +51,8 @@ class Properties {
   static auto ShortCircuitIgnoreCtm() -> bool;
   static auto ExternalHdrEnabled() -> bool;
   static auto SkipPlaneDamageClips() -> bool;
+  static auto PreferredModeSize()
+      -> std::optional<std::pair<uint32_t, uint32_t>>;
 
   /**
    * Minimum display brightness floor in the range [0.0, 1.0].

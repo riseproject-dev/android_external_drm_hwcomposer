@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <map>
 #include <optional>
+#include <utility>
 
 #include "drm/DrmMode.h"
 
@@ -64,6 +65,7 @@ struct HwcConfigParameters {
   bool persistent_hdr_enabled = false;
   bool external_hdr_enabled = false;
   const BackendDisplayCapabilities *capabilities = nullptr;
+  std::optional<std::pair<uint32_t, uint32_t>> preferred_size = std::nullopt;
 };
 
 class HwcDisplayConfigsGenerator {

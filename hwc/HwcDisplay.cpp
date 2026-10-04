@@ -957,6 +957,7 @@ bool HwcDisplay::Init() {
         .persistent_hdr_enabled = Properties::PersistentHdrEnabled(),
         .external_hdr_enabled = Properties::ExternalHdrEnabled(),
         .capabilities = pipeline_->capabilities.get(),
+        .preferred_size = Properties::PreferredModeSize(),
     };
     auto configs = configs_generator_.GenerateDisplayConfigs(*connector,
                                                              params);
