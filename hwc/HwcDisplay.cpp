@@ -1040,6 +1040,11 @@ auto HwcDisplay::GetColorModes() const -> std::vector<ColorMode> {
   }
 
   if (!GetPipe().connector->Get()->GetColorspaceProperty()) {
+    // Without a Colorspace property an external sink gets the default
+    // colorimetry, which is sRGB, so sRGB content can be composed as such.
+    if (GetPipe().connector->Get()->IsExternal()) {
+      return {ColorMode::kNative, ColorMode::kSrgb};
+    }
     return {ColorMode::kNative};
   }
 
